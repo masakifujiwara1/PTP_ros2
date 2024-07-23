@@ -34,17 +34,22 @@ class GAT_TimeSeriesLayer(nn.Module):
 
     def forward(self, x, adj_matrix):
         batch_size, seq_len, num_nodes, num_features = x.size()
-
+        # print(x.size())
         # embedding
         # [B, S, N, F] >> [N, S, F]
-        x_emb = x.permute(0, 2, 1, 3).squeeze()
+        x_emb = x.permute(0, 2, 1, 3).squeeze(0)
+        # print(f'x_emb: {x_emb.shape}')
         # each node encode
         processed_traj = [self.prelu(self.fc1(traj)) for traj in x_emb]
+
+        # print(f'processed_traj: {len(processed_traj)}')
 
         processed_gru = []
         for emb_in in processed_traj:
             # emb_out, _ = self.gru1(emb_in)
+            # print(f'emb_in: {emb_in.shape}')
             emb_out, _ = self.lstm1(emb_in)
+            # print(f'emb_out: {emb_out.shape}')
             processed_gru.append(self.prelu(emb_out))
         x_gru = torch.stack(processed_gru, dim=0) # [N, S, F]
         x_gru = x_gru.permute(1, 0, 2) # [S, N, F]
@@ -66,12 +71,16 @@ class GAT_TimeSeriesLayer(nn.Module):
         gat2 = gat2 + x2_
 
         x3 = self.prelu(self.mlp(gat2)) # [1, 8, 3, 30]
-        x3 = x3.permute(0, 2, 1, 3).squeeze()
+        x3 = x3.permute(0, 2, 1, 3).squeeze(0)
 
         processed_gru2 = []
         for gru_in in x3:
             # gru_out, _ = self.gru2(gru_in)
+            # gru_in = gru_in.unsqueeze(0)
+            # print(f'gru_in: {gru_in.shape}')
             gru_out, _ = self.lstm2(gru_in)
+            # gru_out = gru_out.squeeze(0)
+            # print(f'gru_out: {gru_out.shape}')
             processed_gru2.append(self.prelu(gru_out))
         x4 = torch.stack(processed_gru2, dim=0)
 
