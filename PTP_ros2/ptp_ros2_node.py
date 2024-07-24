@@ -22,7 +22,7 @@ class PtpRos2Node(Node):
 
         self.device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
 
-        self.path = '../checkpoint/social-stgcnn-eth-fpp'
+        self.path = '../checkpoint/social-stgcnn-eth'
         self.model_path = self.path + '/val_best.pth'
         self.obs_seq_len = 8
         self.pred_seq_len = 12
@@ -55,6 +55,8 @@ class PtpRos2Node(Node):
         # print(f'V_pred: {V_pred}, shape: {V_pred.shape}')
         # raw_data_dict = self.test()
         # print(raw_data_dict)
+        # with open('raw_data_dict.pkl', 'wb') as fp:
+        #     pickle.dump(raw_data_dict, fp)
     
     def ped_callback(self, msg):
         self.data_array = np.array(msg.data, dtype=np.dtype(msg.dtype)).reshape(msg.shape)
