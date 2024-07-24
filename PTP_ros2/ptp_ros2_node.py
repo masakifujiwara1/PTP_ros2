@@ -13,6 +13,9 @@ from utils import *
 from metrics import *
 from model_depth_fc_fix import GAT_TimeSeriesLayer
 import copy
+from visualization_msgs.msg import Marker, MarkerArray
+from geometry_msgs.msg import Point
+from marker import *
 
 class PtpRos2Node(Node):
     def __init__(self):
@@ -57,17 +60,41 @@ class PtpRos2Node(Node):
         # print(raw_data_dict)
         # with open('raw_data_dict.pkl', 'wb') as fp:
         #     pickle.dump(raw_data_dict, fp)
+
+        self.marker_array_pub = self.create_publisher(MarkerArray, 'viz_marker', 10)
+        self.marker_array = MarkerArray()
+        self.timer = self.create_timer(1, self.prediction)
+        # self.prediction()
     
     def ped_callback(self, msg):
         self.data_array = np.array(msg.data, dtype=np.dtype(msg.dtype)).reshape(msg.shape)
-        if self.data_array.shape == (8, 4):
-            self.debug_flag = True
+        # if self.data_array.shape == (8, 4):
+        #     self.debug_flag = True
         #     with open('data_array.pkl', 'wb') as fp:
         #         pickle.dump(self.data_array, fp)
 
         self.get_logger().info(f"Received NumPy array: {self.data_array}, shape: {self.data_array.shape}")
 
         # self.dset_test.processed_data(self.data_array)
+
+    def prediction(self):
+        self.marker_array = MarkerArray()
+        # raw_data_dict = self.test()
+        raw_data_dict = self.raw_data_dict
+        # print(raw_data_dict[0]['obs'].shape)
+        # print(raw_data_dict[0]['pred'].shape)
+
+        num_of_ped = raw_data_dict[0]['obs'].shape[1]
+        # print(num_of_ped)
+        obs_pred_seq = np.concatenate((raw_data_dict[0]['obs'], raw_data_dict[0]['pred']), axis=0)
+
+        id_cnt = 0
+        for i in range(num_of_ped):
+            line_strip, points_marker = CreateMarker(obs_pred_seq[:, i, :], id_cnt)
+            self.marker_array.markers.append(line_strip)
+            self.marker_array.markers.append(points_marker)
+            id_cnt += 2
+        self.marker_array_pub.publish(self.marker_array)
 
     def test(self, KSTEPS=1):
         # global loader_test,model
@@ -77,7 +104,7 @@ class PtpRos2Node(Node):
         raw_data_dict = {}
         step =0 
         # for batch in loader_test: 
-        step+=1
+        # step+=1
         #Get data
         # batch = [tensor.cuda() for tensor in batch]
         # obs_traj, pred_traj_gt, obs_traj_rel, pred_traj_gt_rel, non_linear_ped,\
@@ -159,27 +186,28 @@ class PtpRos2Node(Node):
             ade_ls[n]=[]
             fde_ls[n]=[]
 
-        for k in range(KSTEPS):
+        # for k in range(KSTEPS):
 
-            V_pred = mvnormal.sample()
-            V_pred = V_pred.unsqueeze(0)
+        V_pred = mvnormal.sample()
+        V_pred = V_pred.unsqueeze(0)
 
-            #V_pred = seq_to_nodes(pred_traj_gt.data.numpy().copy())
-            # print(V_x.shape, V_pred.shape)
-            V_pred_rel_to_abs = nodes_rel_to_nodes_abs(V_pred.data.cpu().numpy().squeeze(0).copy(),
-                                                    V_x[-1,:,:].copy())
-            raw_data_dict[step]['pred'].append(copy.deepcopy(V_pred_rel_to_abs))
+        #V_pred = seq_to_nodes(pred_traj_gt.data.numpy().copy())
+        # print(V_x.shape, V_pred.shape)
+        V_pred_rel_to_abs = nodes_rel_to_nodes_abs(V_pred.data.cpu().numpy().squeeze(0).copy(),
+                                                V_x[-1,:,:].copy())
+        # raw_data_dict[step]['pred'].append(copy.deepcopy(V_pred_rel_to_abs))
+        raw_data_dict[step]['pred'] = copy.deepcopy(V_pred_rel_to_abs)
             
         # print(V_pred_rel_to_abs.shape) #(12, 3, 2) = seq, ped, location
-            for n in range(num_of_objs):
-                pred = [] 
-                target = []
-                obsrvs = [] 
-                number_of = []
-                pred.append(V_pred_rel_to_abs[:,n:n+1,:])
-                # target.append(V_y_rel_to_abs[:,n:n+1,:])
-                obsrvs.append(V_x_rel_to_abs[:,n:n+1,:])
-                number_of.append(1)
+        for n in range(num_of_objs):
+            pred = [] 
+            target = []
+            obsrvs = [] 
+            number_of = []
+            pred.append(V_pred_rel_to_abs[:,n:n+1,:])
+            # target.append(V_y_rel_to_abs[:,n:n+1,:])
+            obsrvs.append(V_x_rel_to_abs[:,n:n+1,:])
+            number_of.append(1)
 
                 # ade_ls[n].append(ade(pred,target,number_of))
                 # fde_ls[n].append(fde(pred,target,number_of))
