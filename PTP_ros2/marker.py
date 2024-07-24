@@ -9,7 +9,7 @@ def CreateMarker(data, id_):
     line_strip.action = Marker.ADD
     line_strip.scale.x = 0.05
     line_strip.color.a = 1.0
-    line_strip.color.r = 1.0
+    line_strip.color.b = 1.0
     line_strip.id = id_
 
     points_marker = Marker()

@@ -20,7 +20,7 @@ from marker import *
 class PtpRos2Node(Node):
     def __init__(self):
         super().__init__('ptp_ros2_node')
-        # self.ped_sub = self.create_subscription(PedestrianArray, 'ped_seq', self.ped_callback, 10)
+        self.ped_sub = self.create_subscription(PedestrianArray, 'ped_seq', self.ped_callback, 10)
         self.data_array = None
 
         self.device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
@@ -35,7 +35,7 @@ class PtpRos2Node(Node):
         self.model.load_state_dict(torch.load(self.model_path))
         self.get_logger().info(f'Model loaded')
 
-        self.debug_flag = True
+        self.debug_flag = False
 
         if self.debug_flag:
             with open('data_array.pkl','rb') as f: 
@@ -79,8 +79,10 @@ class PtpRos2Node(Node):
 
     def prediction(self):
         self.marker_array = MarkerArray()
-        # raw_data_dict = self.test()
-        raw_data_dict = self.raw_data_dict
+        raw_data_dict = self.test()
+        if raw_data_dict == 0:
+            return
+        # raw_data_dict = self.raw_data_dict
         # print(raw_data_dict[0]['obs'].shape)
         # print(raw_data_dict[0]['pred'].shape)
 
@@ -109,8 +111,10 @@ class PtpRos2Node(Node):
         # batch = [tensor.cuda() for tensor in batch]
         # obs_traj, pred_traj_gt, obs_traj_rel, pred_traj_gt_rel, non_linear_ped,\
         # loss_mask,V_obs,A_obs,V_tr,A_tr = batch
-
-        obs_traj, obs_traj_rel, non_linear_ped, loss_mask, V_obs, A_obs = self.dset_test.processed_data(self.data_array)
+        try:
+            obs_traj, obs_traj_rel, non_linear_ped, loss_mask, V_obs, A_obs = self.dset_test.processed_data(self.data_array)
+        except:
+            return 0
         V_obs = V_obs.unsqueeze(0).to(self.device)
         A_obs = A_obs.unsqueeze(0).to(self.device)
         obs_traj = obs_traj.unsqueeze(0).to(self.device)

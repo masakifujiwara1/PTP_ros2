@@ -187,7 +187,10 @@ class TrajectoryDataset(Dataset):
                 seq_list_rel.append(curr_seq_rel[:num_peds_considered])
 
         self.num_seq = len(seq_list)
-        seq_list = np.concatenate(seq_list, axis=0)
+        try:
+            seq_list = np.concatenate(seq_list, axis=0)
+        except:
+            return 0
         seq_list_rel = np.concatenate(seq_list_rel, axis=0)
         loss_mask_list = np.concatenate(loss_mask_list, axis=0)
         non_linear_ped = np.asarray(non_linear_ped)
