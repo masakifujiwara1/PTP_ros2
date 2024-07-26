@@ -16,6 +16,7 @@ import copy
 from visualization_msgs.msg import Marker, MarkerArray
 from geometry_msgs.msg import Point
 from marker import *
+import time
 
 class PtpRos2Node(Node):
     def __init__(self):
@@ -73,7 +74,7 @@ class PtpRos2Node(Node):
         #     with open('data_array.pkl', 'wb') as fp:
         #         pickle.dump(self.data_array, fp)
 
-        self.get_logger().info(f"Received NumPy array: {self.data_array}, shape: {self.data_array.shape}")
+        # self.get_logger().info(f"Received NumPy array: {self.data_array}, shape: {self.data_array.shape}")
 
         # self.dset_test.processed_data(self.data_array)
 
@@ -128,8 +129,12 @@ class PtpRos2Node(Node):
         #V_obs = batch,seq,node,feat
         #V_obs_tmp = batch,feat,seq,node
         # V_obs_tmp =V_obs.permute(0,3,1,2)
-
+        torch.cuda.synchronize()
+        start = time.time()
         V_pred = self.model(V_obs,A_obs)
+        torch.cuda.synchronize()
+        elapsed_time = time.time() - start
+        print(f'elapsed_time: {elapsed_time}')
         # print(V_pred.shape)
         # torch.Size([1, 5, 12, 2])
         # torch.Size([12, 2, 5])
